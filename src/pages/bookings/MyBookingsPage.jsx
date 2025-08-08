@@ -1,17 +1,30 @@
+import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { cancelBooking } from '../../store/slices/bookingsSlice';
+import { cancelBooking, initBookings } from '../../store/slices/bookingsSlice';
 import Loader from '../../components/loader/Loader';
 import Button from '../../components/button/Button';
-import { useAuth } from '../../hooks/use-auth';
+import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function MyBookingsPage() {
 	const dispatch = useDispatch();
-	const { user } = useAuth();
-	const { list: bookings, loading } = useSelector((state) => state.bookings);
+	const navigate = useNavigate();
+	const { currentUser } = useAuth();
+	const { list: bookings, loading, error } = useSelector((state) => state.bookings);
 	const { data: rooms } = useSelector((state) => state.rooms);
 
+	// Инициализация бронирований при загрузке
+	useEffect(() => {
+		const savedBookings = localStorage.getItem('bookingsState');
+		if (savedBookings) {
+			dispatch(initBookings(JSON.parse(savedBookings)));
+		}
+	}, [dispatch]);
+
 	// Фильтруем бронирования текущего пользователя
-	const userBookings = bookings.filter((booking) => booking.userEmail === user?.email);
+	const userBookings = bookings.filter(
+		(booking) => booking.userEmail === currentUser?.email,
+	);
 
 	// Функция для получения названия номера по ID
 	const getRoomName = (roomId) => {
@@ -21,66 +34,97 @@ export default function MyBookingsPage() {
 
 	// Форматирование даты
 	const formatDate = (dateString) => {
-		return new Date(dateString).toLocaleDateString('ru-RU');
+		return new Date(dateString).toLocaleDateString('ru-RU', {
+			day: 'numeric',
+			month: 'long',
+			year: 'numeric',
+		});
 	};
 
 	// Обработка отмены бронирования
 	const handleCancelBooking = (bookingId) => {
-		dispatch(cancelBooking(bookingId));
+		if (window.confirm('Вы уверены, что хотите отменить бронирование?')) {
+			dispatch(cancelBooking(bookingId));
+		}
 	};
 
+	if (!currentUser) {
+		return (
+			<div className="my-bookings-page">
+				<h1>Мои бронирования</h1>
+				<p>Для просмотра бронирований войдите в систему</p>
+				<Button onClick={() => navigate('/login')}>Войти</Button>
+			</div>
+		);
+	}
+
 	if (loading) return <Loader />;
+
+	if (error) {
+		return (
+			<div className="my-bookings-page">
+				<h1>Мои бронирования</h1>
+				<p className="error">Ошибка загрузки: {error}</p>
+			</div>
+		);
+	}
 
 	return (
 		<div className="my-bookings-page">
 			<h1>Мои бронирования</h1>
 
 			{userBookings.length === 0 ? (
-				<p>У вас нет активных бронирований</p>
+				<div className="no-bookings">
+					<p>У вас нет активных бронирований</p>
+					<Button onClick={() => navigate('/rooms')} variant="primary">
+						Посмотреть номера
+					</Button>
+				</div>
 			) : (
-				<table className="bookings-table">
-					<thead>
-						<tr>
-							<th>ID бронирования</th>
-							<th>Номер</th>
-							<th>Дата заезда</th>
-							<th>Дата выезда</th>
-							<th>Гости</th>
-							<th>Статус</th>
-							<th>Действия</th>
-						</tr>
-					</thead>
-					<tbody>
-						{userBookings.map((booking) => (
-							<tr key={booking.id}>
-								<td>#{booking.id}</td>
-								<td>{getRoomName(booking.roomId)}</td>
-								<td>{formatDate(booking.checkIn)}</td>
-								<td>{formatDate(booking.checkOut)}</td>
-								<td>{booking.guests}</td>
-								<td className={`status-${booking.status}`}>
+				<div className="bookings-list">
+					{userBookings.map((booking) => (
+						<div key={booking.id} className="booking-card">
+							<div className="booking-header">
+								<h2>{getRoomName(booking.roomId)}</h2>
+								<span className={`status-badge status-${booking.status}`}>
 									{booking.status === 'confirmed'
 										? 'Подтверждено'
 										: booking.status === 'canceled'
 										? 'Отменено'
 										: 'Ожидание'}
-								</td>
-								<td>
-									{booking.status === 'confirmed' && (
-										<Button
-											variant="outline"
-											onClick={() =>
-												handleCancelBooking(booking.id)
-											}
-										>
-											Отменить
-										</Button>
-									)}
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
+								</span>
+							</div>
+
+							<div className="booking-details">
+								<p>
+									<strong>Дата заезда:</strong>{' '}
+									{formatDate(booking.checkIn)}
+								</p>
+								<p>
+									<strong>Дата выезда:</strong>{' '}
+									{formatDate(booking.checkOut)}
+								</p>
+								<p>
+									<strong>Гости:</strong> {booking.guests}
+								</p>
+								<p>
+									<strong>ID бронирования:</strong> #{booking.id}
+								</p>
+							</div>
+
+							{booking.status === 'confirmed' && (
+								<div className="booking-actions">
+									<Button
+										variant="outline"
+										onClick={() => handleCancelBooking(booking.id)}
+									>
+										Отменить бронирование
+									</Button>
+								</div>
+							)}
+						</div>
+					))}
+				</div>
 			)}
 		</div>
 	);
