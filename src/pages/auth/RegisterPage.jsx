@@ -6,6 +6,7 @@ const RegisterPage = () => {
 		name: '',
 		email: '',
 		password: '',
+		confirmPassword: '', // 1. Добавляем новое поле
 	});
 	const [error, setError] = useState('');
 	const navigate = useNavigate();
@@ -17,9 +18,20 @@ const RegisterPage = () => {
 	const handleSubmit = (e) => {
 		e.preventDefault();
 
-		// Простая валидация
-		if (!formData.name || !formData.email || !formData.password) {
+		// Простая валидация (обновленная)
+		if (
+			!formData.name ||
+			!formData.email ||
+			!formData.password ||
+			!formData.confirmPassword
+		) {
 			setError('Все поля обязательны для заполнения');
+			return;
+		}
+
+		// 3. Проверка совпадения паролей
+		if (formData.password !== formData.confirmPassword) {
+			setError('Пароли не совпадают');
 			return;
 		}
 
@@ -37,6 +49,9 @@ const RegisterPage = () => {
 			id: Date.now(),
 			...formData,
 		};
+
+		// Удаляем confirmPassword перед сохранением
+		delete newUser.confirmPassword;
 
 		localStorage.setItem('users', JSON.stringify([...users, newUser]));
 		navigate('/login');
@@ -74,6 +89,17 @@ const RegisterPage = () => {
 						type="password"
 						name="password"
 						value={formData.password}
+						onChange={handleChange}
+					/>
+				</div>
+
+				{/* 2. Добавляем поле подтверждения пароля */}
+				<div className="form-group">
+					<label>Подтвердите пароль:</label>
+					<input
+						type="password"
+						name="confirmPassword" // имя должно совпадать с именем в состоянии
+						value={formData.confirmPassword}
 						onChange={handleChange}
 					/>
 				</div>
