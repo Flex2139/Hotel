@@ -1,7 +1,15 @@
 import { Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAuth } from '../../context/AuthContext';
 
-export default function AdminRoute({ children }) {
-	const { isAuth, user } = useSelector((state) => state.auth);
-	return isAuth && user.role === 'admin' ? children : <Navigate to="/" />;
-}
+const AdminRoute = ({ children }) => {
+	const { currentUser } = useAuth();
+
+	// Проверяем, что пользователь авторизован и является админом
+	if (!currentUser || currentUser.role !== 'admin') {
+		return <Navigate to="/" replace />;
+	}
+
+	return children;
+};
+
+export default AdminRoute;

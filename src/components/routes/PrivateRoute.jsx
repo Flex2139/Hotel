@@ -1,7 +1,14 @@
 import { Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAuth } from '../../context/AuthContext';
 
-export default function PrivateRoute({ children }) {
-	const { isAuth } = useSelector((state) => state.auth); // Получаем состояние из Redux
-	return isAuth ? children : <Navigate to="/login" />;
-}
+const PrivateRoute = ({ children }) => {
+	const { currentUser } = useAuth();
+
+	if (!currentUser) {
+		return <Navigate to="/login" replace />;
+	}
+
+	return children;
+};
+
+export default PrivateRoute;

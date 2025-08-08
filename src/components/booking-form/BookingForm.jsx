@@ -1,95 +1,124 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import Button from '../button/Button';
-import Input from '../input/Input';
 
-export default function BookingForm({ roomId, onSubmit }) {
-	const [dates, setDates] = useState({
-		checkIn: '',
-		checkOut: '',
+const BookingForm = ({ roomId, onSubmit, disabled }) => {
+	const { currentUser } = useAuth();
+	const [formData, setFormData] = useState({
+		startDate: '',
+		endDate: '',
+		guests: 1,
+		specialRequests: '',
 	});
-	const [guests, setGuests] = useState(1);
 	const [errors, setErrors] = useState({});
 
 	const validate = () => {
 		const newErrors = {};
 
-		// Проверка даты заезда
-		if (!dates.checkIn) {
-			newErrors.checkIn = 'Укажите дату заезда';
-		} else {
-			const today = new Date();
-			today.setHours(0, 0, 0, 0);
-			const checkInDate = new Date(dates.checkIn);
-
-			if (checkInDate < today) {
-				newErrors.checkIn = 'Дата заезда не может быть в прошлом';
-			}
-		}
-
-		// Проверка даты выезда
-		if (!dates.checkOut) {
-			newErrors.checkOut = 'Укажите дату выезда';
-		} else if (dates.checkIn) {
-			const checkInDate = new Date(dates.checkIn);
-			const checkOutDate = new Date(dates.checkOut);
-
-			if (checkOutDate <= checkInDate) {
-				newErrors.checkOut = 'Дата выезда должна быть позже даты заезда';
-			}
-		}
-
-		// Проверка количества гостей
-		if (guests < 1 || guests > 4) {
-			newErrors.guests = 'Количество гостей должно быть от 1 до 4';
+		if (!formData.startDate) newErrors.startDate = 'Укажите дату заезда';
+		if (!formData.endDate) newErrors.endDate = 'Укажите дату выезда';
+		if (formData.guests < 1) newErrors.guests = 'Минимум 1 гость';
+		if (new Date(formData.endDate) < new Date(formData.startDate)) {
+			newErrors.endDate = 'Дата выезда должна быть после даты заезда';
 		}
 
 		setErrors(newErrors);
 		return Object.keys(newErrors).length === 0;
 	};
 
+	const handleChange = (e) => {
+		const { name, value } = e.target;
+		setFormData((prev) => ({
+			...prev,
+			[name]: name === 'guests' ? parseInt(value) || 0 : value,
+		}));
+	};
+
 	const handleSubmit = (e) => {
 		e.preventDefault();
-		if (validate()) {
-			onSubmit({
-				roomId,
-				...dates,
-				guests,
-			});
-		}
+
+		if (!validate()) return;
+		if (disabled) return;
+
+		onSubmit({
+			roomId,
+			userId: currentUser?.id,
+			...formData,
+			status: 'pending', // Статус бронирования
+		});
 	};
 
 	return (
-		<form onSubmit={handleSubmit}>
-			<h3>Забронировать номер</h3>
+		<form className="booking-form" onSubmit={handleSubmit}>
+			<div className="form-group">
+				<label>Дата заезда:</label>
+				<input
+					type="date"
+					name="startDate"
+					value={formData.startDate}
+					onChange={handleChange}
+					min={new Date().toISOString().split('T')[0]}
+					disabled={disabled}
+					required
+				/>
+				{errors.startDate && <span className="error">{errors.startDate}</span>}
+			</div>
 
-			<Input
-				type="date"
-				value={dates.checkIn}
-				onChange={(value) => setDates({ ...dates, checkIn: value })}
-				error={errors.checkIn} // Передаем ошибку в компонент Input
-			/>
-			{errors.checkIn && <div className="error-text">{errors.checkIn}</div>}
+			<div className="form-group">
+				<label>Дата выезда:</label>
+				<input
+					type="date"
+					name="endDate"
+					value={formData.endDate}
+					onChange={handleChange}
+					min={formData.startDate || new Date().toISOString().split('T')[0]}
+					disabled={disabled}
+					required
+				/>
+				{errors.endDate && <span className="error">{errors.endDate}</span>}
+			</div>
 
-			<Input
-				type="date"
-				value={dates.checkOut}
-				onChange={(value) => setDates({ ...dates, checkOut: value })}
-				error={errors.checkOut}
-			/>
-			{errors.checkOut && <div className="error-text">{errors.checkOut}</div>}
+			<div className="form-group">
+				<label>Количество гостей:</label>
+				<input
+					type="number"
+					name="guests"
+					min="1"
+					max="4"
+					value={formData.guests}
+					onChange={handleChange}
+					disabled={disabled}
+				/>
+				{errors.guests && <span className="error">{errors.guests}</span>}
+			</div>
 
-			<Input
-				type="number"
-				placeholder="Гости"
-				value={guests}
-				onChange={setGuests}
-				min="1"
-				max="4"
-				error={errors.guests}
-			/>
-			{errors.guests && <div className="error-text">{errors.guests}</div>}
+			<div className="form-group">
+				<label>Особые пожелания:</label>
+				<textarea
+					name="specialRequests"
+					value={formData.specialRequests}
+					onChange={handleChange}
+					disabled={disabled}
+					rows="3"
+				/>
+			</div>
 
-			<Button type="submit">Подтвердить</Button>
+			<Button
+				type="submit"
+				disabled={disabled}
+				className={disabled ? 'disabled-btn' : 'primary-btn'}
+			>
+				{disabled ? 'Войдите для бронирования' : 'Забронировать номер'}
+			</Button>
+
+			{disabled && (
+				<p className="auth-notice">
+					Для бронирования необходимо <a href="/login">войти</a> или{' '}
+					<a href="/register">зарегистрироваться</a>
+				</p>
+			)}
 		</form>
 	);
-}
+};
+
+export default BookingForm;
