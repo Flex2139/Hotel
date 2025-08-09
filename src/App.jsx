@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext'; // Импортируем провайдер
+import { AuthProvider } from './context/AuthContext';
 import HomePage from './pages/home/HomePage';
 import RoomsPage from './pages/rooms/RoomsPage';
 import RoomDetailsPage from './pages/rooms/RoomDetailsPage';
@@ -11,12 +11,16 @@ import PrivateRoute from './components/routes/PrivateRoute';
 import AdminRoute from './components/routes/AdminRoute';
 import NotFoundPage from './pages/not-found-page/NotFoundPage';
 import Layout from './components/layout/Layout';
-import ProfilePage from './pages/profile/ProfilePage'; // Добавляем страницу профиля
+import ProfilePage from './pages/profile/ProfilePage';
+
+// Новые страницы
+import GalleryPage from './pages/gallery/GalleryPage';
+import ReviewsPage from './pages/reviews/ReviewsPage';
+import ServicesPage from './pages/services/ServicesPage';
 
 export default function App() {
 	return (
 		<BrowserRouter>
-			{/* Обертываем всё в AuthProvider */}
 			<AuthProvider>
 				<Layout>
 					<Routes>
@@ -24,14 +28,16 @@ export default function App() {
 						<Route path="/" element={<HomePage />} />
 						<Route path="/rooms" element={<RoomsPage />} />
 						<Route path="/rooms/:id" element={<RoomDetailsPage />} />
+						<Route path="/gallery" element={<GalleryPage />} />
+						<Route path="/reviews" element={<ReviewsPage />} />
+						<Route path="/services" element={<ServicesPage />} />
 						<Route path="/login" element={<LoginPage />} />
 						<Route path="/register" element={<RegisterPage />} />
 
-						{/* Приватные маршруты (только для авторизованных) */}
+						{/* Приватные маршруты */}
 						<Route element={<PrivateRoute />}>
 							<Route path="/my-bookings" element={<MyBookingsPage />} />
-							<Route path="/profile" element={<ProfilePage />} />{' '}
-							{/* Добавляем профиль */}
+							<Route path="/profile" element={<ProfilePage />} />
 						</Route>
 
 						{/* Админские маршруты */}
